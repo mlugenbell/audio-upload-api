@@ -53,3 +53,28 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+// Add this BEFORE the app.listen() line
+app.post('/upload-base64', (req, res) => {
+  const { audioBase64, filename } = req.body;
+  
+  if (!audioBase64) {
+    return res.status(400).json({ error: 'No audio data' });
+  }
+
+  const buffer = Buffer.from(audioBase64, 'base64');
+  const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}.mp3`;
+  const filepath = path.join(uploadsDir, uniqueName);
+  
+  fs.writeFileSync(filepath, buffer);
+  
+  const fileUrl = `${req.protocol}://${req.get('host')}/files/${uniqueName}`;
+  
+  res.json({
+    success: true,
+    url: fileUrl
+  });
+});
+
+// Add body parser at the top with other requires
+app.use(express.json({ limit: '50mb' }));
