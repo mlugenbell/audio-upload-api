@@ -38,7 +38,9 @@ app.post('/upload', upload.single('file'), (req, res) => {
     return res.status(400).json({ error: 'No file uploaded' });
   }
 
-  const fileUrl = `${req.protocol}://${req.get('host')}/files/${req.file.filename}`;
+  // Force HTTPS for Railway deployments
+  const protocol = req.get('host').includes('railway.app') ? 'https' : req.protocol;
+  const fileUrl = `${protocol}://${req.get('host')}/files/${req.file.filename}`;
   
   res.json({
     success: true,
@@ -63,7 +65,9 @@ app.post('/upload-base64', (req, res) => {
     
     fs.writeFileSync(filepath, buffer);
     
-    const fileUrl = `${req.protocol}://${req.get('host')}/files/${uniqueName}`;
+    // Force HTTPS for Railway deployments
+    const protocol = req.get('host').includes('railway.app') ? 'https' : req.protocol;
+    const fileUrl = `${protocol}://${req.get('host')}/files/${uniqueName}`;
     
     res.json({
       success: true,
