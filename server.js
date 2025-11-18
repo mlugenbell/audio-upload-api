@@ -7,9 +7,9 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware - put these at the top
+// Middleware
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '100mb' }));
 
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
@@ -33,7 +33,6 @@ const upload = multer({
 
 app.use('/files', express.static(uploadsDir));
 
-// Original upload endpoint
 app.post('/upload', upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
@@ -49,22 +48,37 @@ app.post('/upload', upload.single('file'), (req, res) => {
   });
 });
 
-// Base64 upload endpoint
 app.post('/upload-base64', (req, res) => {
-  const { audioBase64, filename } = req.body;
-  
-  if (!audioBase64) {
-    return res.status(400).json({ error: 'No audio data' });
-  }
+  try {
+    const { audioBase64, filename } = req.body;
+    
+    if (!audioBase64) {
+      return res.status(400).json({ error: 'No audio data' });
+    }
 
-  const buffer = Buffer.from(audioBase64, 'base64');
-  const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}.mp3`;
-  const filepath = path.join(uploadsDir, uniqueName);
-  
-  fs.writeFileSync(filepath, buffer);
-  
-  const fileUrl = `${req.protocol}://${req.get('host')}/files/${uniqueName}`;
-  
-  res.json({
-    success: true,
-    url: fileUr
+    const base64Data = audioBase64.replace(/^data:audio\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}.mp3`;
+    const filepath = path.join(uploadsDir, uniqueName);
+    
+    fs.writeFileSync(filepath, buffer);
+    
+    const fileUrl = `${req.protocol}://${req.get('host')}/files/${uniqueName}`;
+    
+    res.json({
+      success: true,
+      url: fileUrl
+    });
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({ error: 'Failed to process audio', details: error.message });
+  }
+});
+
+app.get('/', (req, res) => {
+  res.json({ status: 'Audio upload server running' });
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
