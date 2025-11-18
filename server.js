@@ -89,7 +89,7 @@ app.post('/upload-video-base64', (req, res) => {
 
     const base64Data = videoBase64.replace(/^data:video\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
-    const uniqueName = `${Date.now()-${Math.random().toString(36).substring(7)}.mp4`;
+    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}.mp4`;
     const filepath = path.join(uploadsDir, uniqueName);
     
     fs.writeFileSync(filepath, buffer);
