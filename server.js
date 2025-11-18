@@ -79,6 +79,34 @@ app.post('/upload-base64', (req, res) => {
   }
 });
 
+app.post('/upload-video-base64', (req, res) => {
+  try {
+    const { videoBase64, filename } = req.body;
+    
+    if (!videoBase64) {
+      return res.status(400).json({ error: 'No video data' });
+    }
+
+    const base64Data = videoBase64.replace(/^data:video\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    const uniqueName = `${Date.now()-${Math.random().toString(36).substring(7)}.mp4`;
+    const filepath = path.join(uploadsDir, uniqueName);
+    
+    fs.writeFileSync(filepath, buffer);
+    
+    const protocol = req.get('host').includes('railway.app') ? 'https' : req.protocol;
+    const fileUrl = `${protocol}://${req.get('host')}/files/${uniqueName}`;
+    
+    res.json({
+      success: true,
+      url: fileUrl
+    });
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({ error: 'Failed to process video', details: error.message });
+  }
+});
+
 app.get('/', (req, res) => {
   res.json({ status: 'Audio upload server running' });
 });
