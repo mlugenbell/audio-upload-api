@@ -7,7 +7,9 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Middleware - put these at the top
 app.use(cors());
+app.use(express.json({ limit: '50mb' }));
 
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
@@ -31,6 +33,7 @@ const upload = multer({
 
 app.use('/files', express.static(uploadsDir));
 
+// Original upload endpoint
 app.post('/upload', upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
@@ -46,15 +49,7 @@ app.post('/upload', upload.single('file'), (req, res) => {
   });
 });
 
-app.get('/', (req, res) => {
-  res.json({ status: 'Audio upload server running' });
-});
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
-// Add this BEFORE the app.listen() line
+// Base64 upload endpoint
 app.post('/upload-base64', (req, res) => {
   const { audioBase64, filename } = req.body;
   
@@ -72,9 +67,4 @@ app.post('/upload-base64', (req, res) => {
   
   res.json({
     success: true,
-    url: fileUrl
-  });
-});
-
-// Add body parser at the top with other requires
-app.use(express.json({ limit: '50mb' }));
+    url: fileUr
