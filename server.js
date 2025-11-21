@@ -45,7 +45,7 @@ app.post('/upload-audio', upload.single('audio'), (req, res) => {
     return res.status(400).json({ error: 'No audio file uploaded' });
   }
 
-  const fileUrl = `${req.protocol}://${req.get('host')}/files/${req.file.filename}`;
+  const fileUrl = `https://${req.get('host')}/files/${req.file.filename}`;
   
   res.json({
     success: true,
@@ -61,7 +61,7 @@ app.post('/upload-video', upload.single('video'), (req, res) => {
     return res.status(400).json({ error: 'No video file uploaded' });
   }
 
-  const fileUrl = `${req.protocol}://${req.get('host')}/files/${req.file.filename}`;
+  const fileUrl = `https://${req.get('host')}/files/${req.file.filename}`;
   
   res.json({
     success: true,
