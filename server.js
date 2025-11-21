@@ -1,46 +1,51 @@
 const express = require('express');
 const multer = require('multer');
-const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors());
-app.use(express.json({ limit: '100mb' }));
-
+// Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir);
+  fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
+// Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
+    const uniqueSuffix = Date.now() + '-' + Math.random().toString(36).substring(7);
+    const ext = path.extname(file.originalname);
+    cb(null, uniqueSuffix + ext);
   }
 });
 
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }
+  limits: {
+    fileSize: 100 * 1024 * 1024 // 100MB limit for videos
+  }
 });
 
+// Serve static files from uploads directory
 app.use('/files', express.static(uploadsDir));
 
-app.post('/upload', upload.single('file'), (req, res) => {
+// Health check
+app.get('/', (req, res) => {
+  res.json({ status: 'File upload server running', endpoints: ['/upload-audio', '/upload-video'] });
+});
+
+// Audio upload endpoint
+app.post('/upload-audio', upload.single('audio'), (req, res) => {
   if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded' });
+    return res.status(400).json({ error: 'No audio file uploaded' });
   }
 
-  // Force HTTPS for Railway deployments
-  const protocol = req.get('host').includes('railway.app') ? 'https' : req.protocol;
-  const fileUrl = `${protocol}://${req.get('host')}/files/${req.file.filename}`;
+  const fileUrl = `${req.protocol}://${req.get('host')}/files/${req.file.filename}`;
   
   res.json({
     success: true,
@@ -50,67 +55,22 @@ app.post('/upload', upload.single('file'), (req, res) => {
   });
 });
 
-app.post('/upload-base64', (req, res) => {
-  try {
-    const { audioBase64, filename } = req.body;
-    
-    if (!audioBase64) {
-      return res.status(400).json({ error: 'No audio data' });
-    }
-
-    const base64Data = audioBase64.replace(/^data:audio\/\w+;base64,/, '');
-    const buffer = Buffer.from(base64Data, 'base64');
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}.mp3`;
-    const filepath = path.join(uploadsDir, uniqueName);
-    
-    fs.writeFileSync(filepath, buffer);
-    
-    // Force HTTPS for Railway deployments
-    const protocol = req.get('host').includes('railway.app') ? 'https' : req.protocol;
-    const fileUrl = `${protocol}://${req.get('host')}/files/${uniqueName}`;
-    
-    res.json({
-      success: true,
-      url: fileUrl
-    });
-  } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ error: 'Failed to process audio', details: error.message });
+// Video upload endpoint
+app.post('/upload-video', upload.single('video'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No video file uploaded' });
   }
-});
 
-app.post('/upload-video-base64', (req, res) => {
-  try {
-    const { videoBase64, filename } = req.body;
-    
-    if (!videoBase64) {
-      return res.status(400).json({ error: 'No video data' });
-    }
-
-    const base64Data = videoBase64.replace(/^data:video\/\w+;base64,/, '');
-    const buffer = Buffer.from(base64Data, 'base64');
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}.mp4`;
-    const filepath = path.join(uploadsDir, uniqueName);
-    
-    fs.writeFileSync(filepath, buffer);
-    
-    const protocol = req.get('host').includes('railway.app') ? 'https' : req.protocol;
-    const fileUrl = `${protocol}://${req.get('host')}/files/${uniqueName}`;
-    
-    res.json({
-      success: true,
-      url: fileUrl
-    });
-  } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ error: 'Failed to process video', details: error.message });
-  }
-});
-
-app.get('/', (req, res) => {
-  res.json({ status: 'Audio upload server running' });
+  const fileUrl = `${req.protocol}://${req.get('host')}/files/${req.file.filename}`;
+  
+  res.json({
+    success: true,
+    url: fileUrl,
+    filename: req.file.filename,
+    size: req.file.size
+  });
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`File upload server running on port ${PORT}`);
 });
